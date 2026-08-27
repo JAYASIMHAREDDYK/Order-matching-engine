@@ -1,4 +1,4 @@
-# Order Book Engine
+# Order Matching Engine
 
 A limit order book and matching engine written in C++17. Uses polymorphic memory resources (`std::pmr`) to avoid heap allocation on the matching hot path.
 
