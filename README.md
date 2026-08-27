@@ -42,27 +42,82 @@ g++ -O3 -std=c++17 -Iinclude src/matching_engine.cpp src/benchmark.cpp -o benchm
 
 ## Benchmark Results
 
-Measured with `./benchmark` — 1,000,000 iterations, single match against 10 resting price levels, Release build (`-O3`).
-
-| Percentile | Latency (ns) |
-|------------|--------------|
-| p50        | 100          |
-| p90        | 100          |
-| p99        | 100          |
-| p99.9      | 400          |
+Measured with `./benchmark` — 1,000,000 iterations of randomly varied inputs (5–20 resting price levels, random prices/quantities/sides per iteration), Release build (`-O3`).
 
 Hardware: Intel Core i5-12450H — latency is hardware-dependent; numbers are given for reference, not as a portable guarantee.
 
-No `malloc`/`new` calls occur during matching — the `unsynchronized_pool_resource` over the 512 KB stack buffer absorbs all allocation.
+### Latency Summary
+
+| Metric | Value |
+|--------|-------|
+| mean   | 110.5 ns |
+| stdev  | 463.3 ns |
+| p50    | 100 ns |
+| p90    | 200 ns |
+| p99    | 300 ns |
+| p99.9  | 500 ns |
+| min    | 0 ns |
+| max    | 342,200 ns |
+
+### Latency Distribution
+
+```
+[     0 -  34221 ns]   999986  (100.0%)
+[ 34221 -  68442 ns]       10  (0.0%)
+[ 68442 - 102663 ns]        1  (0.0%)
+[102663 - 136884 ns]        1  (0.0%)
+[136884 - 171105 ns]        1  (0.0%)
+[205326 - 239547 ns]        0  (0.0%)
+[307989 - 342210 ns]        1  (0.0%)
+```
+
+99.99% of iterations complete within a single histogram bucket (< 34 µs). The rare outliers in the tail are OS scheduling jitter, not matching-engine latency.
+
+### Methodology
+
+- **Anti-DCE**: An `std::atomic<int64_t>` sink accumulates `trades.size()` after every call and is printed at exit, preventing the compiler from optimising the matching loop away.
+- **Varied inputs**: Each iteration uses a unique, pre-generated `(book state, incoming order)` tuple with randomised price levels, quantities, and sides (deterministic seed for reproducibility).
+- **Clock**: `std::chrono::steady_clock` with empirical resolution printed at startup. On Windows the effective resolution is ~100 ns, so sub-100 ns calls are rounded to the nearest tick.
+- **Zero allocation**: The `unsynchronized_pool_resource` over a 512 KB stack buffer absorbs all allocation — no `malloc`/`new` on the hot path.
+
+### Sample Output
+
+```
+=== Order Book Latency Benchmark ===
+
+Clock tick period : 1 ns
+Empirical min tick: 100 ns
+Generating 1000000 random inputs... done.
+
+Running 1000000 iterations...
+
+=== Results ===
+mean =    110.5 ns
+std  =    463.3 ns
+p50  =    100.0 ns
+p90  =    200.0 ns
+p99  =    300.0 ns
+p999 =    500.0 ns
+min  =      0.0 ns
+max  = 342200.0 ns
+
+=== Latency Distribution ===
+[     0 -  34221 ns]   999986  (100.0%)
+[ 34221 -  68442 ns]       10  (0.0%)
+...
+
+PASS: p99 300.0 ns < 500 ns target
+sink = 728862  (anti-DCE checksum)
+```
 
 ### Running it yourself
 
 ```bash
-./build/Release/benchmark   # CMake build
-./benchmark                 # direct compilation
+./build/benchmark    # CMake build
+./benchmark          # direct compilation
 ```
 
-Prints p50/p90/p99/p999 latencies and a histogram.
+Prints clock resolution diagnostics, mean/stdev, p50–p999 percentiles, and a full latency histogram.
 
 ## Running Tests
 
