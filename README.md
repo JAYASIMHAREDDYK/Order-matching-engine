@@ -86,7 +86,6 @@ Hardware: Intel Core i5-12450H — latency is hardware-dependent; numbers are gi
 === Order Book Latency Benchmark ===
 
 Clock tick period : 1 ns
-Empirical min tick: 100 ns
 Generating 1000000 random inputs... done.
 
 Running 1000000 iterations...
