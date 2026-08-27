@@ -100,11 +100,6 @@ p999 =    500.0 ns
 min  =      0.0 ns
 max  = 342200.0 ns
 
-=== Latency Distribution ===
-[     0 -  34221 ns]   999986  (100.0%)
-[ 34221 -  68442 ns]       10  (0.0%)
-...
-
 PASS: p99 300.0 ns < 500 ns target
 sink = 728862  (anti-DCE checksum)
 ```
